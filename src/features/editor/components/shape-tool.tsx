@@ -14,7 +14,10 @@ export const ShapeTool: React.FC<ShapeToolProps> = ({
   iconClassName,
 }) => {
   return (
-    <button onClick={onClick} className=" aspect-square border rounded-md p-5">
+    <button
+      onClick={onClick}
+      className="cursor-pointer aspect-square border rounded-md p-5"
+    >
       <Icon className={cn("h-full w-full", iconClassName)} />
     </button>
   );
