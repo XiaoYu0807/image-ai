@@ -3,8 +3,6 @@
 import {
   LayoutTemplate,
   ImageIcon,
-  Pencil,
-  Presentation,
   Settings,
   Shapes,
   Sparkles,

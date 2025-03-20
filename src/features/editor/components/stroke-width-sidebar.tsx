@@ -1,11 +1,12 @@
 import { cn } from "@/lib/utils";
-import { ActiveTool, Editor, STROKE_DASH_ARRAY, STROKE_WIDTH } from "../types";
+import { ActiveTool, STROKE_DASH_ARRAY, STROKE_WIDTH } from "../types";
 import { ToolSidebarHeader } from "./tool-sidebar-header";
 import { ToolSidebarClose } from "./tool-sidebar-close";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import Editor from "../Editor";
 
 interface StrokeWidthSidebarProps {
   editor: Editor | undefined;
