@@ -3,12 +3,14 @@ import { fabric } from "fabric";
 import {
   CIRCLE_OPTIONS,
   DIAMOND_OPTIONS,
+  FilterType,
+  FONT_SIZE,
   FONT_WEIGHT,
   RECTANGLE_OPTIONS,
   TEXT_OPTIONS,
   TRIANGLE_OPTIONS,
 } from "./types";
-import { isTextType } from "./utils";
+import { createFilter, isTextType } from "./utils";
 
 export interface EditorProps {
   canvas: fabric.Canvas;
@@ -83,6 +85,49 @@ export default class Editor {
   // ======================================
   // =          Public functions          =
   // ======================================
+
+  public changeImageFilter(value: FilterType) {
+    const objects = this.canvas.getActiveObjects();
+
+    objects.forEach((object) => {
+      if (object.type === "image") {
+        const imageObject = object as fabric.Image;
+
+        const effect = createFilter(value);
+
+        imageObject.filters = effect ? [effect] : [];
+        imageObject.applyFilters();
+        this.canvas.renderAll();
+      }
+    });
+  }
+
+  public addImage(value: string) {
+    fabric.Image.fromURL(
+      value,
+      (image) => {
+        const workspace = this._getWorkspace();
+
+        image.scaleToWidth(workspace?.width || 0);
+        image.scaleToHeight(workspace?.height || 0);
+
+        this._addToCanvas(image);
+      },
+      {
+        crossOrigin: "anonymous",
+      }
+    );
+  }
+
+  public delete() {
+    this.canvas.getActiveObjects().forEach((object) => {
+      this.canvas.remove(object);
+    });
+
+    this.canvas.discardActiveObject();
+    this.canvas.renderAll();
+  }
+
   public addText(value: string, options?: ITextOptions) {
     const object = new fabric.Textbox(value, {
       ...TEXT_OPTIONS,
@@ -421,7 +466,42 @@ export default class Editor {
     return value;
   }
 
-  public changeTextAlign(value: ITextOptions["textAlign"]) {
+  public getActiveFontSize(): number {
+    const selectedObject = this.selectedObjects[0];
+
+    if (!selectedObject) {
+      return FONT_SIZE;
+    }
+
+    // @ts-ignore
+    const value = selectedObject.get("fontSize") || FONT_SIZE;
+
+    return value;
+  }
+  public changeFontSize(value: number) {
+    this.canvas.getActiveObjects().forEach((object) => {
+      if (isTextType(object.type)) {
+        // @ts-ignore
+        object.set({ fontSize: value });
+      }
+    });
+
+    this.canvas.renderAll();
+  }
+
+  public getActiveTextAlign(): string {
+    const selectedObject = this.selectedObjects[0];
+
+    if (!selectedObject) {
+      return "left";
+    }
+
+    // @ts-ignore
+    const value = selectedObject.get("textAlign") || "left";
+
+    return value;
+  }
+  public changeTextAlign(value: string) {
     this.canvas.getActiveObjects().forEach((object) => {
       if (isTextType(object.type)) {
         // @ts-ignore
@@ -468,19 +548,6 @@ export default class Editor {
     // @ts-ignore
     // Faulty TS library, fontWeight exists.
     const value = selectedObject.get("fontWeight") || FONT_WEIGHT;
-
-    return value;
-  }
-
-  public getActiveTextAlign(): string {
-    const selectedObject = this.selectedObjects[0];
-
-    if (!selectedObject) {
-      return "left";
-    }
-
-    // @ts-ignore
-    const value = selectedObject.get("textAlign") || "left";
 
     return value;
   }
