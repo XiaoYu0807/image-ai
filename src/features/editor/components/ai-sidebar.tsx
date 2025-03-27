@@ -32,7 +32,7 @@ export const AiSidebar: React.FC<AiSidebarProps> = ({
     // TODO: Block with paywall
 
     mutation.mutate(
-      { prompt: "" },
+      { prompt: value },
       {
         onSuccess: ({ data }) => {
           editor?.addImage(data);
@@ -55,16 +55,23 @@ export const AiSidebar: React.FC<AiSidebarProps> = ({
       <ToolSidebarHeader title="AI" description="Generate an image using AI" />
 
       <ScrollArea>
-        <form className="p-4 space-y-6">
+        <form onSubmit={onSubmit} className="p-4 space-y-6">
           <Textarea
+            disabled={mutation.isPending}
             placeholder="An astronaut riding a horse on mars, hd, dramatic lighting"
             cols={30}
             rows={10}
             required
             minLength={3}
             className="min-h-20"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
           />
-          <Button type="submit" className="w-full">
+          <Button
+            disabled={mutation.isPending}
+            type="submit"
+            className="w-full"
+          >
             Generate
           </Button>
         </form>

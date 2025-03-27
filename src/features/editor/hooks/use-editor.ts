@@ -12,6 +12,7 @@ import {
 import { useCanvasEvents } from "./use-canvas-events";
 import { isTextType } from "../utils";
 import Editor from "../Editor";
+import { useClipboard } from "./use-clipboard";
 
 interface InitParams {
   initialCanvas: fabric.Canvas;
@@ -29,6 +30,10 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
   const [strokeWidth, setStrokeWidth] = useState(STROKE_WIDTH);
   const [strokeDashArray, setStrokeDashArray] =
     useState<number[]>(STROKE_DASH_ARRAY);
+
+  const { copy, paste } = useClipboard({
+    canvas,
+  });
 
   useAutoResize({
     canvas,
@@ -57,8 +62,12 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
       setStrokeColor,
       setStrokeDashArray,
       setStrokeWidth,
+      copy,
+      paste,
     });
   }, [
+    copy,
+    paste,
     canvas,
     fillColor,
     strokeColor,

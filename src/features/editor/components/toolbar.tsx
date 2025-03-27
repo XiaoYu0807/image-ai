@@ -11,6 +11,8 @@ import {
   AlignCenter,
   AlignRight,
   Trash,
+  SquareSplitHorizontal,
+  Copy,
 } from "lucide-react";
 import { RxTransparencyGrid } from "react-icons/rx";
 import { isTextType } from "../utils";
@@ -318,6 +320,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </Hint>
         </div>
       )}
+      {isImage && (
+        <div className="flex items-center h-full justify-center">
+          <Hint label="Remove background" side="bottom">
+            <Button
+              onClick={() => onChangeActiveTool("remove-bg")}
+              size="icon"
+              variant="ghost"
+              className={cn(activeTool === "remove-bg" && "bg-gray-100")}
+            >
+              <SquareSplitHorizontal className="size-4" />
+            </Button>
+          </Hint>
+        </div>
+      )}
       <div className="flex items-center h-full justify-center">
         <Hint label="Bring forward" side="bottom">
           <Button
@@ -349,6 +365,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             className={cn(activeTool === "opacity" && "bg-gray-100")}
           >
             <RxTransparencyGrid className="size-4" />
+          </Button>
+        </Hint>
+      </div>
+      <div className="flex items-center h-full justify-center">
+        <Hint label="Duplicate" side="bottom">
+          <Button
+            onClick={() => {
+              editor?.onCopy();
+              editor?.onPaste();
+            }}
+            size="icon"
+            variant="ghost"
+          >
+            <Copy className="size-4" />
           </Button>
         </Hint>
       </div>

@@ -20,6 +20,8 @@ export interface EditorProps {
   selectedObjects: fabric.Object[];
   strokeDashArray: number[];
   fontFamily: string;
+  copy: () => void;
+  paste: () => void;
   setFillColor: (value: string) => void;
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
@@ -37,6 +39,8 @@ export default class Editor {
   fontFamily: string;
 
   // functions
+  onCopy: () => void;
+  onPaste: () => void;
   setFillColor: (value: string) => void;
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
@@ -52,6 +56,8 @@ export default class Editor {
     this.strokeDashArray = props.strokeDashArray;
     this.fontFamily = props.fontFamily;
 
+    this.onCopy = props.copy;
+    this.onPaste = props.paste;
     this.setFillColor = props.setFillColor;
     this.setStrokeColor = props.setStrokeColor;
     this.setStrokeWidth = props.setStrokeWidth;
