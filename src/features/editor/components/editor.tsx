@@ -1,56 +1,58 @@
-"use client";
+'use client';
 
-import { fabric } from "fabric";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useEditor } from "../hooks/use-editor";
-import { Navbar } from "./navbar";
-import { Sidebar } from "@/features/editor/components/sidebar";
-import { Toolbar } from "./toolbar";
-import { Footer } from "./footer";
-import { ActiveTool, selectionDependentTools } from "../types";
-import { ShapeSidebar } from "./shape-sidebar";
-import { FillColorSidebar } from "./fill-color-sidebar";
-import { StrokeColorSidebar } from "./stroke-color-sidebar";
-import { StrokeWidthSidebar } from "./stroke-width-sidebar";
-import { OpacitySidebar } from "./opacity-sidebar";
-import { TextSidebar } from "./text-sidebar";
-import { FontSidebar } from "./font-sidebar";
-import { ImageSidebar } from "./image-sidebar";
-import { FilterSidebar } from "./filter-sidebar";
-import { AiSidebar } from "./ai-sidebar";
-import { RemoveBgSidebar } from "./remove-bg-sidebar";
+import { fabric } from 'fabric';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEditor } from '../hooks/use-editor';
+import { Navbar } from './navbar';
+import { Sidebar } from '@/features/editor/components/sidebar';
+import { Toolbar } from './toolbar';
+import { Footer } from './footer';
+import { ActiveTool, selectionDependentTools } from '../types';
+import { ShapeSidebar } from './shape-sidebar';
+import { FillColorSidebar } from './fill-color-sidebar';
+import { StrokeColorSidebar } from './stroke-color-sidebar';
+import { StrokeWidthSidebar } from './stroke-width-sidebar';
+import { OpacitySidebar } from './opacity-sidebar';
+import { TextSidebar } from './text-sidebar';
+import { FontSidebar } from './font-sidebar';
+import { ImageSidebar } from './image-sidebar';
+import { FilterSidebar } from './filter-sidebar';
+import { AiSidebar } from './ai-sidebar';
+import { RemoveBgSidebar } from './remove-bg-sidebar';
+import { DrawSidebar } from './draw-sidebar';
+import { SettingsSidebar } from './settings-sidebar';
 
 export const Editor = () => {
-  const [activeTool, setActiveTool] = useState<ActiveTool>("select");
-
-  const onChangeActiveTool = useCallback(
-    (tool: ActiveTool) => {
-      if (tool === activeTool) {
-        return setActiveTool("select");
-      }
-
-      if (tool === "draw") {
-        // TODO: Enable draw mode
-      }
-
-      if (activeTool === "draw") {
-        // TODO: Disable draw mode
-      }
-
-      setActiveTool(tool);
-    },
-    [activeTool]
-  );
+  const [activeTool, setActiveTool] = useState<ActiveTool>('select');
 
   const onClearSelection = useCallback(() => {
     if (selectionDependentTools.includes(activeTool)) {
-      setActiveTool("select");
+      setActiveTool('select');
     }
   }, [activeTool]);
 
   const { init, editor } = useEditor({
     clearSelectionCallback: onClearSelection,
   });
+
+  const onChangeActiveTool = useCallback(
+    (tool: ActiveTool) => {
+      if (tool === 'draw') {
+        editor?.enableDrawingMode();
+      }
+
+      if (activeTool === 'draw') {
+        editor?.disableDrawingMode();
+      }
+
+      if (tool === activeTool) {
+        return setActiveTool('select');
+      }
+
+      setActiveTool(tool);
+    },
+    [activeTool, editor]
+  );
 
   const canvasRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,7 +75,11 @@ export const Editor = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <Navbar activeTool={activeTool} onChangeActiveTool={onChangeActiveTool} />
+      <Navbar
+        editor={editor}
+        activeTool={activeTool}
+        onChangeActiveTool={onChangeActiveTool}
+      />
       <div className="absolute h-[calc(100%-68px)] w-full top-[68px] flex">
         <Sidebar
           activeTool={activeTool}
@@ -134,6 +140,16 @@ export const Editor = () => {
           activeTool={activeTool}
           onChangeActiveTool={onChangeActiveTool}
         />
+        <DrawSidebar
+          editor={editor}
+          activeTool={activeTool}
+          onChangeActiveTool={onChangeActiveTool}
+        />
+        <SettingsSidebar
+          editor={editor}
+          activeTool={activeTool}
+          onChangeActiveTool={onChangeActiveTool}
+        />
         <main className="bg-muted flex-1 overflow-auto relative flex flex-col">
           <Toolbar
             editor={editor}
@@ -147,7 +163,7 @@ export const Editor = () => {
           >
             <canvas ref={canvasRef} />
           </div>
-          <Footer />
+          <Footer editor={editor} />
         </main>
       </div>
     </div>

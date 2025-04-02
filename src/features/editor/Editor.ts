@@ -1,16 +1,17 @@
-import { ITextOptions } from "fabric/fabric-impl";
-import { fabric } from "fabric";
+import { ITextOptions } from 'fabric/fabric-impl';
+import { fabric } from 'fabric';
 import {
   CIRCLE_OPTIONS,
   DIAMOND_OPTIONS,
   FilterType,
   FONT_SIZE,
   FONT_WEIGHT,
+  JSON_KEYS,
   RECTANGLE_OPTIONS,
   TEXT_OPTIONS,
   TRIANGLE_OPTIONS,
-} from "./types";
-import { createFilter, isTextType } from "./utils";
+} from './types';
+import { createFilter, downloadFile, isTextType, transformText } from './utils';
 
 export interface EditorProps {
   canvas: fabric.Canvas;
@@ -21,7 +22,13 @@ export interface EditorProps {
   strokeDashArray: number[];
   fontFamily: string;
   copy: () => void;
+  save: (skip?: boolean) => void;
+  redo: () => void;
+  undo: () => void;
+  canRedo: () => boolean;
+  canUndo: () => boolean;
   paste: () => void;
+  autoZoom: () => void;
   setFillColor: (value: string) => void;
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
@@ -41,6 +48,12 @@ export default class Editor {
   // functions
   onCopy: () => void;
   onPaste: () => void;
+  autoZoom: () => void;
+  save: (skip?: boolean) => void;
+  onRedo: () => void;
+  onUndo: () => void;
+  canRedo: () => boolean;
+  canUndo: () => boolean;
   setFillColor: (value: string) => void;
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
@@ -56,8 +69,15 @@ export default class Editor {
     this.strokeDashArray = props.strokeDashArray;
     this.fontFamily = props.fontFamily;
 
+    this.save = props.save;
+    this.onRedo = props.redo;
+    this.onUndo = props.undo;
+    this.canRedo = props.canRedo;
+    this.canUndo = props.canUndo;
+
     this.onCopy = props.copy;
     this.onPaste = props.paste;
+    this.autoZoom = props.autoZoom;
     this.setFillColor = props.setFillColor;
     this.setStrokeColor = props.setStrokeColor;
     this.setStrokeWidth = props.setStrokeWidth;
@@ -69,7 +89,7 @@ export default class Editor {
   // =          Private functions          =
   // =======================================
   private _getWorkspace() {
-    return this.canvas.getObjects().find((object) => object.name === "clip");
+    return this.canvas.getObjects().find((object) => object.name === 'clip');
   }
 
   private _center(object: fabric.Object) {
@@ -88,15 +108,128 @@ export default class Editor {
     this.canvas.setActiveObject(object);
   }
 
+  private _generateSaveOptions = () => {
+    const { width, height, left, top } = this._getWorkspace() as fabric.Rect;
+
+    return {
+      name: 'Image',
+      format: 'png',
+      quality: 1,
+      width,
+      height,
+      left,
+      top,
+    };
+  };
+
   // ======================================
   // =          Public functions          =
   // ======================================
+
+  public savePng = () => {
+    const options = this._generateSaveOptions();
+
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    const dataUrl = this.canvas.toDataURL(options);
+    downloadFile(dataUrl, 'png');
+    this.autoZoom();
+  };
+
+  public saveSvg = () => {
+    const options = this._generateSaveOptions();
+
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    const dataUrl = this.canvas.toDataURL(options);
+    downloadFile(dataUrl, 'svg');
+    this.autoZoom();
+  };
+
+  public saveJpg = () => {
+    const options = this._generateSaveOptions();
+
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    const dataUrl = this.canvas.toDataURL(options);
+    downloadFile(dataUrl, 'jpg');
+    this.autoZoom();
+  };
+
+  public saveJson = async () => {
+    const dataUrl = this.canvas.toJSON(JSON_KEYS);
+
+    await transformText(dataUrl.objects);
+    const fileString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(dataUrl, null, '\t')
+    )}`;
+
+    downloadFile(fileString, 'json');
+  };
+
+  public loadJson = (json: string) => {
+    const data = JSON.parse(json);
+
+    this.canvas.loadFromJSON(data, () => {
+      this.autoZoom();
+    });
+  };
+
+  public zoomIn() {
+    let zoomRatio = this.canvas.getZoom();
+    zoomRatio += 0.05;
+
+    const center = this.canvas.getCenter();
+    this.canvas.zoomToPoint(
+      new fabric.Point(center.left, center.top),
+      zoomRatio > 1 ? 1 : zoomRatio
+    );
+  }
+
+  public zoomOut() {
+    let zoomRatio = this.canvas.getZoom();
+    zoomRatio -= 0.05;
+
+    const center = this.canvas.getCenter();
+    this.canvas.zoomToPoint(
+      new fabric.Point(center.left, center.top),
+      zoomRatio < 0.2 ? 0.2 : zoomRatio
+    );
+  }
+
+  public getWorkspace() {
+    return this._getWorkspace();
+  }
+
+  public changeSize(value: { width: number; height: number }) {
+    const workspace = this._getWorkspace();
+
+    workspace?.set(value);
+    this.autoZoom();
+    this.save();
+  }
+
+  public changeBackground(value: string) {
+    const workspace = this._getWorkspace();
+    workspace?.set({ fill: value });
+    this.canvas.renderAll();
+    this.save();
+  }
+
+  public enableDrawingMode() {
+    this.canvas.discardActiveObject();
+    this.canvas.renderAll();
+    this.canvas.isDrawingMode = true;
+    this.canvas.freeDrawingBrush.width = this.strokeWidth;
+    this.canvas.freeDrawingBrush.color = this.strokeColor;
+  }
+
+  public disableDrawingMode() {
+    this.canvas.isDrawingMode = false;
+  }
 
   public changeImageFilter(value: FilterType) {
     const objects = this.canvas.getActiveObjects();
 
     objects.forEach((object) => {
-      if (object.type === "image") {
+      if (object.type === 'image') {
         const imageObject = object as fabric.Image;
 
         const effect = createFilter(value);
@@ -120,7 +253,7 @@ export default class Editor {
         this._addToCanvas(image);
       },
       {
-        crossOrigin: "anonymous",
+        crossOrigin: 'anonymous',
       }
     );
   }
@@ -193,7 +326,7 @@ export default class Editor {
     }
 
     // @ts-ignore
-    const value = selectedObject.get("underline") || false;
+    const value = selectedObject.get('underline') || false;
 
     return value;
   }
@@ -217,7 +350,7 @@ export default class Editor {
     }
 
     // @ts-ignore
-    const value = selectedObject.get("linethrough") || false;
+    const value = selectedObject.get('linethrough') || false;
 
     return value;
   }
@@ -237,11 +370,11 @@ export default class Editor {
     const selectedObject = this.selectedObjects[0];
 
     if (!selectedObject) {
-      return "normal";
+      return 'normal';
     }
 
     // @ts-ignore
-    const value = selectedObject.get("fontStyle") || "normal";
+    const value = selectedObject.get('fontStyle') || 'normal';
 
     return value;
   }
@@ -293,7 +426,7 @@ export default class Editor {
 
       object.set({ stroke: value });
     });
-
+    this.canvas.freeDrawingBrush.color = value;
     this.canvas.renderAll();
   }
 
@@ -303,7 +436,7 @@ export default class Editor {
     this.canvas.getActiveObjects().forEach((object) => {
       object.set({ strokeWidth: value });
     });
-
+    this.canvas.freeDrawingBrush.width = value;
     this.canvas.renderAll();
   }
 
@@ -430,7 +563,7 @@ export default class Editor {
       return this.fillColor;
     }
 
-    const value = selectedObject.get("fill") || this.fillColor;
+    const value = selectedObject.get('fill') || this.fillColor;
 
     // Currently, gradients & patterns are not supported
     return value as string;
@@ -443,7 +576,7 @@ export default class Editor {
       return this.strokeColor;
     }
 
-    const value = selectedObject.get("stroke") || this.strokeColor;
+    const value = selectedObject.get('stroke') || this.strokeColor;
 
     return value;
   }
@@ -455,7 +588,7 @@ export default class Editor {
       return this.strokeWidth;
     }
 
-    const value = selectedObject.get("strokeWidth") || this.strokeWidth;
+    const value = selectedObject.get('strokeWidth') || this.strokeWidth;
 
     return value;
   }
@@ -467,7 +600,7 @@ export default class Editor {
       return this.strokeDashArray;
     }
 
-    const value = selectedObject.get("strokeDashArray") || this.strokeDashArray;
+    const value = selectedObject.get('strokeDashArray') || this.strokeDashArray;
 
     return value;
   }
@@ -480,7 +613,7 @@ export default class Editor {
     }
 
     // @ts-ignore
-    const value = selectedObject.get("fontSize") || FONT_SIZE;
+    const value = selectedObject.get('fontSize') || FONT_SIZE;
 
     return value;
   }
@@ -499,11 +632,11 @@ export default class Editor {
     const selectedObject = this.selectedObjects[0];
 
     if (!selectedObject) {
-      return "left";
+      return 'left';
     }
 
     // @ts-ignore
-    const value = selectedObject.get("textAlign") || "left";
+    const value = selectedObject.get('textAlign') || 'left';
 
     return value;
   }
@@ -525,7 +658,7 @@ export default class Editor {
       return 1;
     }
 
-    const value = selectedObject.get("opacity") || 1;
+    const value = selectedObject.get('opacity') || 1;
 
     return value;
   }
@@ -539,7 +672,7 @@ export default class Editor {
 
     // @ts-ignore
     // Faulty TS library, fontFamily exists.
-    const value = selectedObject.get("fontFamily") || this.fontFamily;
+    const value = selectedObject.get('fontFamily') || this.fontFamily;
 
     return value;
   }
@@ -553,7 +686,7 @@ export default class Editor {
 
     // @ts-ignore
     // Faulty TS library, fontWeight exists.
-    const value = selectedObject.get("fontWeight") || FONT_WEIGHT;
+    const value = selectedObject.get('fontWeight') || FONT_WEIGHT;
 
     return value;
   }

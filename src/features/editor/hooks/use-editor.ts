@@ -1,18 +1,22 @@
-import { fabric } from "fabric";
-import { useCallback, useMemo, useState } from "react";
-import { useAutoResize } from "./use-auto-resize";
+import { fabric } from 'fabric';
+import { useCallback, useMemo, useState } from 'react';
+import { useAutoResize } from './use-auto-resize';
 import {
   EditorHookProps,
   FILL_COLOR,
   FONT_FAMILY,
+  JSON_KEYS,
   STROKE_COLOR,
   STROKE_DASH_ARRAY,
   STROKE_WIDTH,
-} from "../types";
-import { useCanvasEvents } from "./use-canvas-events";
-import { isTextType } from "../utils";
-import Editor from "../Editor";
-import { useClipboard } from "./use-clipboard";
+} from '../types';
+import { useCanvasEvents } from './use-canvas-events';
+import { isTextType } from '../utils';
+import Editor from '../Editor';
+import { useClipboard } from './use-clipboard';
+import { useHistory } from './use-history';
+import { useHotkeys } from './use-hotkeys';
+import { useWindowEvents } from './use-window-events';
 
 interface InitParams {
   initialCanvas: fabric.Canvas;
@@ -31,25 +35,45 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
   const [strokeDashArray, setStrokeDashArray] =
     useState<number[]>(STROKE_DASH_ARRAY);
 
+  useWindowEvents();
+
   const { copy, paste } = useClipboard({
     canvas,
   });
 
-  useAutoResize({
+  const { save, canRedo, canUndo, redo, undo, setHistoryIndex, canvasHistory } =
+    useHistory({ canvas });
+
+  const { autoZoom } = useAutoResize({
     canvas,
     container,
   });
 
   useCanvasEvents({
     canvas,
+    save,
     setSelectedObjects,
     clearSelectionCallback,
+  });
+
+  useHotkeys({
+    canvas,
+    undo,
+    redo,
+    save,
+    copy,
+    paste,
   });
 
   const editor = useMemo(() => {
     if (!canvas) return undefined;
 
     return new Editor({
+      save,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       canvas,
       fillColor,
       fontFamily,
@@ -57,17 +81,24 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
       strokeColor,
       strokeDashArray,
       strokeWidth,
+      copy,
+      paste,
+      autoZoom,
       setFillColor,
       setFontFamily,
       setStrokeColor,
-      setStrokeDashArray,
       setStrokeWidth,
-      copy,
-      paste,
+      setStrokeDashArray,
     });
   }, [
+    save,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     copy,
     paste,
+    autoZoom,
     canvas,
     fillColor,
     strokeColor,
@@ -80,24 +111,24 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
   const init = useCallback(
     ({ initialCanvas, initialContainer }: InitParams) => {
       fabric.Object.prototype.set({
-        cornerColor: "#FFF",
-        cornerStyle: "circle",
-        borderColor: "#3b82f6",
+        cornerColor: '#FFF',
+        cornerStyle: 'circle',
+        borderColor: '#3b82f6',
         borderScaleFactor: 1.5,
         transparentCorners: false,
         borderOpacityWhenMoving: 1,
-        cornerStrokeColor: "#3b82f6",
+        cornerStrokeColor: '#3b82f6',
       });
 
       const initialWorkspace = new fabric.Rect({
         width: 900,
         height: 1200,
-        name: "clip",
-        fill: "white",
+        name: 'clip',
+        fill: 'white',
         selectable: false,
         hasControls: false,
         shadow: new fabric.Shadow({
-          color: "rgba(0, 0, 0, 0.8)",
+          color: 'rgba(0, 0, 0, 0.8)',
           blur: 5,
         }),
       });
@@ -111,8 +142,15 @@ export const useEditor = ({ clearSelectionCallback }: EditorHookProps) => {
 
       setCanvas(initialCanvas);
       setContainer(initialContainer);
+
+      const currentState = JSON.stringify(initialCanvas.toJSON(JSON_KEYS));
+      canvasHistory.current = [currentState];
+      setHistoryIndex(0);
     },
-    []
+    [
+      canvasHistory, // No need, this is from useRef
+      setHistoryIndex, // No need, this is from useState
+    ]
   );
 
   return {

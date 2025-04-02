@@ -1,14 +1,16 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Logo } from "./logo";
+import { Button } from '@/components/ui/button';
+import { Logo } from './logo';
+
+import { useFilePicker } from 'use-file-picker';
 
 import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 import {
   ChevronDown,
@@ -16,24 +18,41 @@ import {
   MousePointerClick,
   Redo2,
   Undo2,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { CiFileOn } from "react-icons/ci";
-import { Separator } from "@/components/ui/separator";
-import { Hint } from "@/components/hint";
-import { BsCloudCheck } from "react-icons/bs";
-import { ActiveTool } from "../types";
-import { cn } from "@/lib/utils";
+import { CiFileOn } from 'react-icons/ci';
+import { Separator } from '@/components/ui/separator';
+import { Hint } from '@/components/hint';
+import { BsCloudCheck } from 'react-icons/bs';
+import { ActiveTool } from '../types';
+import { cn } from '@/lib/utils';
+import Editor from '../Editor';
 
 interface NavbarProps {
+  editor: Editor | undefined;
   activeTool: ActiveTool;
   onChangeActiveTool: (tool: ActiveTool) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  editor,
   activeTool,
   onChangeActiveTool,
 }) => {
+  const { openFilePicker } = useFilePicker({
+    accept: '.json',
+    onFilesSuccessfullySelected: ({ plainFiles }: any) => {
+      if (plainFiles && plainFiles.length > 0) {
+        const file = plainFiles[0];
+        const reader = new FileReader();
+        reader.readAsText(file, 'UTF-8');
+        reader.onload = () => {
+          editor?.loadJson(reader.result as string);
+        };
+      }
+    },
+  });
+
   return (
     <nav className="w-full flex items-center p-4 h-[68px] gap-x-8 border-b lg:pl-[34px]">
       <Logo />
@@ -47,8 +66,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-60">
             <DropdownMenuItem
-              onClick={() => {}} // TODO: Add functionality
               className="flex items-center gap-x-2"
+              onClick={() => openFilePicker()}
             >
               <CiFileOn className="size-8" />
               <div>
@@ -65,28 +84,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onChangeActiveTool("select")}
-            className={cn(activeTool === "select" && "bg-gray-100")}
+            onClick={() => onChangeActiveTool('select')}
+            className={cn(activeTool === 'select' && 'bg-gray-100')}
           >
             <MousePointerClick className="size-4" />
           </Button>
         </Hint>
         <Hint label="Undo" side="bottom">
           <Button
+            disabled={!editor?.canUndo()}
             variant="ghost"
             size="icon"
-            onClick={() => {}} // TODO: Add functionality
-            className="" // TODO: Add dynamic class
+            onClick={() => editor?.onUndo()}
           >
             <Undo2 className="size-4" />
           </Button>
         </Hint>
         <Hint label="Redo" side="bottom">
           <Button
+            disabled={!editor?.canRedo()}
             variant="ghost"
             size="icon"
-            onClick={() => {}} // TODO: Add functionality
-            className="" // TODO: Add dynamic class
+            onClick={() => editor?.onRedo()}
           >
             <Redo2 className="size-4" />
           </Button>
@@ -107,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <DropdownMenuContent align="end" className="min-w-60">
               <DropdownMenuItem
                 className="flex items-center gap-x-2"
-                onClick={() => {}} // TODO: Add functionality
+                onClick={() => editor?.saveJson()}
               >
                 <CiFileOn className="size-8" />
                 <div>
@@ -119,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center gap-x-2"
-                onClick={() => {}} // TODO: Add functionality
+                onClick={() => editor?.savePng()}
               >
                 <CiFileOn className="size-8" />
                 <div>
@@ -131,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center gap-x-2"
-                onClick={() => {}} // TODO: Add functionality
+                onClick={() => editor?.saveJpg()}
               >
                 <CiFileOn className="size-8" />
                 <div>
@@ -143,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center gap-x-2"
-                onClick={() => {}} // TODO: Add functionality
+                onClick={() => editor?.saveSvg()}
               >
                 <CiFileOn className="size-8" />
                 <div>
